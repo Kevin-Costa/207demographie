@@ -1,0 +1,172 @@
+#!/usr/bin/python 
+# -*- coding:utf-8 -*-
+
+import matplotlib.pyplot as plt
+import os, sys
+import re
+import math
+
+def             parsing(nb_arg, arg):
+    try:
+        fd = open("207demographie_donnees.csv", "r")
+    except:
+        print "\033[1;31mErreur: Le fichier n'a pas pu être ouvert\033[1;0m"
+        sys.exit()
+    i = 1
+    liste = []
+    while (i < nb_arg):
+        fd.seek(0)
+        flag = 0
+        for line in fd.readlines():
+            result = re.sub(",", ".", line)
+            result = result.split(";")
+            if arg[i] == result[1]:
+                flag = 1
+                liste.append(result)
+        if (flag == 0):
+            print "\033[1;31mLe code de la ville '\033[1;33m" + arg[i] + "\033[1;31m' n'existe pas et n'est donc pas pris en compte dans les calculs\033[1;0m"
+        i += 1
+    if (not liste):
+        print "\033[1;31mDesolé, il n'y aucun pays correct pour le calcul\033[1;0m"
+        sys.exit()
+    return (liste)
+
+def             displayListePays(liste):
+    i = 0
+    length = len(liste)
+    print "\033[1;32mPays :\033[1;34m"
+    while i < length:
+        print "\t", liste[i][0]
+        i += 1
+
+def             newListeWithValEveryCountry(liste):
+    newListe = []
+    i = 2
+    length = len(liste)
+    while i <= 52:
+        valYear = 0
+        j = 0
+        while (j < length):
+            try:
+                if liste[j][i] != "":
+                    valYear += float(liste[j][i])
+            except:
+                valYear += 0
+            j += 1
+        newListe.append(valYear)
+        i += 1
+    i = 0
+    ens = 0
+    while (i <= 50):
+        ens += newListe[i]
+        i += 1
+    if (ens == 0):
+        print "\033[1;31mLes calculs sont impossibles car toutes les valeurs sont à 0\033[1;0m"
+        sys.exit()
+    return (newListe)
+
+if len(sys.argv) == 1:
+   print "\033[1;31mLe programme a besoin d'arguments\033[1;0m"
+liste = parsing(len(sys.argv), sys.argv)
+displayListePays(liste)
+liste = newListeWithValEveryCountry(liste)
+
+listYear = []
+listPop = []
+graphX = []
+graphY_XY = []
+graphY_YX = []
+year = 1961
+i = 0
+averagePop = 0
+averageYear = 0
+aXNum = 0
+aXDenum = 0
+while (year <= 2011):
+    listYear.append(year)
+    listPop.append(float(liste[i]) / 10**6)
+    aXNum += year * (float(liste[i]) / 10**6)
+    aXDenum += year**2
+    averageYear += year
+    averagePop += float(liste[i]) / 10**6
+    year += 1
+    i += 1
+averageYear /= len(liste)
+averagePop /= len(liste)
+aXNum -= len(liste) * averageYear * averagePop
+aXDenum -= len(liste) * averageYear**2
+
+aYNum = 0
+aYDenum = 0
+year = 1961
+i = 0
+while (year <= 2011):
+    aYNum += (year - averageYear) * ((float(liste[i]) / 10**6) - averagePop)
+    aYDenum += ((float(liste[i]) / 10**6) - averagePop)**2
+    year += 1
+    i += 1
+ax = aXNum / aXDenum
+bx = averagePop - ax * averageYear
+ay = aYNum / aYDenum
+by = averageYear - ay * averagePop
+
+year = 1961
+i = 0
+while year < 2051:
+    res = ax * year + bx
+    res2 = (year - by) / ay
+    graphX.append(year)
+    graphY_XY.append(res2)
+    graphY_YX.append(res)
+    year += 1
+    i += 1
+year = 1961
+i = 0
+ensEcart = 0.0
+while (year <= 2011):
+    tmpEnsEcart = (float(liste[i]) / 10**6) - (bx + ax * year)
+    ensEcart += tmpEnsEcart**2
+    year += 1
+    i += 1
+ecartY = math.sqrt(ensEcart / i)
+year = 1961
+ensEcart = 0.0
+i = 0
+while (year <= 2011):
+    tmpEnsEcart = (float(liste[i]) / 10**6) - ((year - by) / ay)
+    ensEcart += tmpEnsEcart**2
+    year += 1
+    i += 1
+ecartX = math.sqrt((ensEcart / (i)))
+print "\033[1;32mAjustement de Y en X :"
+if bx > 0:
+    print "\tY = \033[1;34m%.2f\033[1;32m X + \033[1;34m%.2f\033[1;32m" % (ax, bx)
+else:
+    print "\tY = \033[1;34m%.2f\033[1;32m X \033[1;34m%.2f\033[1;32m" % (ax, bx)
+print "\tEcart-Type:\t\t\t\t\033[1;34m%.2f\033[1;32m" % ecartY
+print "\tEstimation de la population en \033[1;34m2050\033[1;32m:\t\033[1;34m%.2f\033[1;32m" %float(graphY_YX[89])
+print "Ajustement de Y en X :"
+if by > 0:
+    print "\tY = \033[1;34m%.2f\033[1;32m X + \033[1;34m%.2f\033[1;32m" % (ay, by)
+else:
+    print "\tY = \033[1;34m%.2f\033[1;32m X \033[1;34m%.2f\033[1;32m" % (ay, by)
+print "\tEcart-Type:\t\t\t\t\033[1;34m%.2f\033[1;32m" %ecartX
+print "\tEstimation de la population en \033[1;34m2050\033[1;32m:\t\033[1;34m%.2f\033[1;32m" %float(graphY_XY[89])
+print "Coefficient de corrélation: \033[1;34m%.4f\033[1;0m" % math.sqrt(ax * ay)
+try:
+    os.environ["DISPLAY"]
+except:
+    print "\033[1;31mDisplay de l'env a disparu\033[1;0m"
+    sys.exit()
+plt.plot(listYear, listPop, label = "Moyenne demographique")
+plt.plot(graphX, graphY_XY, label = "Ajustement de Y en X")
+plt.plot(graphX, graphY_YX, label = "Ajustement de X en Y")
+plt.title("207demographie")
+plt.xlabel("Annee")
+plt.ylabel("Population (en Millions)")
+plt.grid(1)
+plt.legend(loc = 0)
+try:
+    plt.show()
+except:
+    print "\033[1;31mLe programme est off\033[1;0m"
